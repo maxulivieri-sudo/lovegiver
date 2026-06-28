@@ -7,6 +7,7 @@ import { scenarios, glossary } from '@/data/scenarios';
 import { supabase } from '@/lib/supabase';
 import Sidebar from './Sidebar';
 import Auth from './screens/Auth';
+import Landing from './screens/Landing';
 import Home from './screens/Home';
 import Catalog from './screens/Catalog';
 import ScenarioPlayer from './screens/ScenarioPlayer';
@@ -16,6 +17,7 @@ import Dashboard from './screens/Dashboard';
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup'>('landing');
   const [screen, setScreen] = useState<Screen>('home');
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
   const [step, setStep] = useState(0);
@@ -143,7 +145,21 @@ export default function App() {
   }
 
   if (!user) {
-    return <Auth onAuth={() => setUser(user)} />;
+    if (authMode === 'landing') {
+      return (
+        <Landing
+          onLogin={() => setAuthMode('login')}
+          onSignup={() => setAuthMode('signup')}
+        />
+      );
+    }
+    return (
+      <Auth
+        initialMode={authMode === 'signup' ? 'signup' : 'login'}
+        onAuth={() => setAuthMode('landing')}
+        onBack={() => setAuthMode('landing')}
+      />
+    );
   }
 
   const inFlow = screen === 'scenario' || screen === 'report';

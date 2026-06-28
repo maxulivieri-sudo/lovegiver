@@ -5,10 +5,12 @@ import { supabase } from '@/lib/supabase';
 
 interface Props {
   onAuth: () => void;
+  onBack?: () => void;
+  initialMode?: 'login' | 'signup';
 }
 
-export default function Auth({ onAuth }: Props) {
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+export default function Auth({ onAuth, onBack, initialMode = 'login' }: Props) {
+  const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -55,6 +57,13 @@ export default function Auth({ onAuth }: Props) {
         padding: '40px 36px', width: '100%', maxWidth: 420,
         boxShadow: '0 24px 50px -30px rgba(40,30,20,.35)',
       }}>
+        {/* Back */}
+        {onBack && (
+          <button onClick={onBack} style={{ fontSize: 13, color: '#7a857f', background: 'none', cursor: 'pointer', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+            ← Torna alla home
+          </button>
+        )}
+
         {/* Logo */}
         <div style={{ marginBottom: 28, textAlign: 'center' }}>
           <div style={{
