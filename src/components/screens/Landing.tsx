@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 interface Props {
   onLogin: () => void;
   onSignup: () => void;
@@ -281,12 +283,13 @@ export default function Landing({ onLogin, onSignup }: Props) {
                   </li>
                 ))}
               </ul>
-              <button style={{
-                marginTop: 28, background: '#caa07a', color: '#3a2417', fontWeight: 700,
-                fontSize: 14, padding: '13px', borderRadius: 11, cursor: 'pointer',
+              <Link href="/enti" style={{
+                display: 'block', textAlign: 'center', marginTop: 28,
+                background: '#caa07a', color: '#3a2417', fontWeight: 700,
+                fontSize: 14, padding: '13px', borderRadius: 11, textDecoration: 'none',
               }}>
-                Contattaci per un preventivo →
-              </button>
+                Scopri l'offerta per enti →
+              </Link>
             </div>
 
           </div>
