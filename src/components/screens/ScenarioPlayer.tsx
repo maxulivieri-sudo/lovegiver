@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import type { Scenario, StepResult, Quality } from '@/types';
 
 const QUALITY_MAP: Record<Quality, { label: string; bg: string; bd: string; fg: string }> = {
@@ -33,6 +34,20 @@ export default function ScenarioPlayer({
 }: Props) {
   const steps = scenario.steps || [];
   const curStep = steps[step];
+
+  // Shuffle choice order once per scenario load (stable within a session)
+  const shuffledChoiceIndices = useMemo(() => {
+    return steps.map(st => {
+      if (st.type !== 'dialogue' || !st.choices?.length) return [];
+      const idx = st.choices.map((_, i) => i);
+      for (let i = idx.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [idx[i], idx[j]] = [idx[j], idx[i]];
+      }
+      return idx;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario.id]);
   const isNarr = curStep?.type === 'narration';
   const isDlg = curStep?.type === 'dialogue';
   const isFree = curStep?.type === 'free';
@@ -237,10 +252,10 @@ export default function ScenarioPlayer({
               La tua risposta
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 13 }}>
-              {(curStep.choices || []).map((c, i) => (
+              {(shuffledChoiceIndices[step]?.length ? shuffledChoiceIndices[step] : (curStep.choices || []).map((_, i) => i)).map((origIdx) => (
                 <button
-                  key={i}
-                  onClick={() => onChoose(i)}
+                  key={origIdx}
+                  onClick={() => onChoose(origIdx)}
                   onMouseEnter={e => {
                     e.currentTarget.style.borderColor = '#1f4d46';
                     e.currentTarget.style.boxShadow = '0 6px 16px -10px rgba(31,77,70,.6)';
@@ -257,7 +272,7 @@ export default function ScenarioPlayer({
                     transition: 'border-color .15s, box-shadow .15s',
                   }}
                 >
-                  {c.text}
+                  {curStep.choices![origIdx].text}
                 </button>
               ))}
             </div>
