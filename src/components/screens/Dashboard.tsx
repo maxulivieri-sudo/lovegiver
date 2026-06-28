@@ -1,159 +1,111 @@
 'use client';
 
-const courses = [
-  { name: 'Affettività e disabilità — base', students: 24, completion: 78, avg: 82, color: '#1f4d46' },
-  { name: 'Consenso e autodeterminazione', students: 18, completion: 61, avg: 74, color: '#c06a48' },
-  { name: 'Caregiver e famiglie', students: 31, completion: 45, avg: 69, color: '#3a6f8f' },
-];
+import { useEffect, useState } from 'react';
+import type { User } from '@supabase/supabase-js';
+import { supabase, type Attempt } from '@/lib/supabase';
 
-const kpis = [
-  { label: 'Corsisti attivi', value: '73', sub: '+12 questa settimana' },
-  { label: 'Scenari completati', value: '418', sub: 'ultimi 30 giorni' },
-  { label: 'Punteggio medio', value: '76%', sub: '+4% sul mese' },
-  { label: 'Errori critici', value: '9%', sub: 'delle sessioni' },
-];
+interface Props {
+  user: User;
+}
 
-const students = [
-  { name: 'Marco Bianchi', initials: 'MB', role: 'Educatore', scenario: 'Il genitore iperprotettivo', score: 88, status: 'Completato', statusColor: '#2f6b4f', statusBg: '#eef5f0' },
-  { name: 'Giulia Conti', initials: 'GC', role: 'Psicologa', scenario: 'La richiesta esplicita', score: 72, status: 'Completato', statusColor: '#2f6b4f', statusBg: '#eef5f0' },
-  { name: 'Ahmed Karimi', initials: 'AK', role: 'Assistente sociale', scenario: 'Cura, controllo e rispetto', score: 0, status: 'In corso', statusColor: '#8a6a1f', statusBg: '#fbf6ea' },
-  { name: 'Elena Ferri', initials: 'EF', role: 'Caregiver', scenario: 'Il genitore iperprotettivo', score: 54, status: 'Da rivedere', statusColor: '#b03a2e', statusBg: '#fbecea' },
-  { name: 'Davide Lupo', initials: 'DL', role: 'Studente', scenario: "L'équipe in disaccordo", score: 91, status: 'Completato', statusColor: '#2f6b4f', statusBg: '#eef5f0' },
-];
+export default function Dashboard({ user }: Props) {
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [loading, setLoading] = useState(true);
 
-const skills = [
-  { label: 'Ascolto e accoglienza', val: 84 },
-  { label: 'Riconoscimento dei diritti', val: 77 },
-  { label: 'Gestione del limite professionale', val: 68 },
-  { label: "Sostegno all'autodeterminazione", val: 72 },
-];
+  useEffect(() => {
+    supabase
+      .from('attempts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('completed_at', { ascending: false })
+      .then(({ data }) => {
+        setAttempts(data ?? []);
+        setLoading(false);
+      });
+  }, [user.id]);
 
-export default function Dashboard() {
+  const totalScore = attempts.reduce((s, a) => s + a.score, 0);
+  const totalMax = attempts.reduce((s, a) => s + a.max_score, 0);
+  const avgPct = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
+
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '46px 56px 80px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24 }}>
-        <div>
-          <div style={{ fontSize: 12, letterSpacing: '.14em', textTransform: 'uppercase', color: '#9aa49f', fontWeight: 600 }}>
-            Dashboard docente
-          </div>
-          <h1 className="font-serif-display" style={{ fontWeight: 700, fontSize: 32, margin: '8px 0 0', letterSpacing: '-.01em' }}>
-            Panoramica formativa
-          </h1>
-        </div>
-        <div style={{ display: 'flex', gap: 9 }}>
-          <span style={{ background: '#fff', border: '1px solid #e2d9cd', color: '#5a6864', fontSize: 13, fontWeight: 500, padding: '9px 15px', borderRadius: 10 }}>
-            Ultimi 30 giorni
-          </span>
-          <button style={{ background: '#1f4d46', color: '#fff', fontSize: 13, fontWeight: 600, padding: '9px 16px', borderRadius: 10 }}>
-            Esporta dati
-          </button>
-        </div>
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '54px 56px 80px' }}>
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        background: '#e7efeb', color: '#1f4d46', fontSize: 12, fontWeight: 600,
+        letterSpacing: '.04em', padding: '6px 13px', borderRadius: 100,
+      }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1f4d46' }} />
+        I miei progressi
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 18, marginTop: 26 }}>
-        {kpis.map(k => (
-          <div key={k.label} style={{ background: '#fff', border: '1px solid #e7ded2', borderRadius: 15, padding: 20 }}>
-            <div style={{ fontSize: 12.5, color: '#7a857f', fontWeight: 500 }}>{k.label}</div>
-            <div className="font-serif-display" style={{ fontSize: 32, fontWeight: 700, color: '#21302d', marginTop: 6, lineHeight: 1 }}>
-              {k.value}
-            </div>
-            <div style={{ fontSize: 12, color: '#2f6b4f', marginTop: 6 }}>{k.sub}</div>
+      <h1 className="font-serif-display" style={{ fontSize: 36, fontWeight: 700, margin: '16px 0 0', letterSpacing: '-.015em' }}>
+        Ciao{user.user_metadata?.full_name ? `, ${(user.user_metadata.full_name as string).split(' ')[0]}` : ''}.
+      </h1>
+      <p style={{ fontSize: 16, color: '#52605b', margin: '8px 0 36px' }}>
+        Ecco il tuo percorso formativo su LoveGiver Campus.
+      </p>
+
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 36 }}>
+        {[
+          { label: 'Scenari completati', value: attempts.length },
+          { label: 'Punteggio medio', value: `${avgPct}%` },
+          { label: 'Punti totali', value: totalScore },
+        ].map(stat => (
+          <div key={stat.label} style={{ background: '#fff', border: '1px solid #e7ded2', borderRadius: 16, padding: '22px 24px' }}>
+            <div className="font-serif-display" style={{ fontSize: 32, fontWeight: 700, color: '#1f4d46' }}>{stat.value}</div>
+            <div style={{ fontSize: 13, color: '#7a857f', marginTop: 4 }}>{stat.label}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20, marginTop: 20 }}>
-        {/* Active courses */}
-        <div style={{ background: '#fff', border: '1px solid #e7ded2', borderRadius: 18, padding: 24 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 700 }}>Corsi attivi</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 18 }}>
-            {courses.map(c => (
-              <div key={c.name}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#21302d' }}>{c.name}</div>
-                  <div style={{ fontSize: 12.5, color: '#7a857f' }}>{c.students} corsisti · media {c.avg}%</div>
+      {/* Attempts list */}
+      <h2 style={{ fontSize: 15, fontWeight: 700, color: '#3c4742', margin: '0 0 14px' }}>Scenari completati</h2>
+
+      {loading ? (
+        <div style={{ color: '#7a857f', fontSize: 14 }}>Caricamento…</div>
+      ) : attempts.length === 0 ? (
+        <div style={{ background: '#fff', border: '1px solid #e7ded2', borderRadius: 16, padding: '32px 24px', textAlign: 'center' }}>
+          <div style={{ fontSize: 15, color: '#3c4742', fontWeight: 500 }}>Nessuno scenario completato ancora.</div>
+          <div style={{ fontSize: 13, color: '#7a857f', marginTop: 6 }}>Vai al catalogo per iniziare il tuo primo percorso.</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {attempts.map(attempt => {
+            const pct = Math.round((attempt.score / attempt.max_score) * 100);
+            const date = new Date(attempt.completed_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+            return (
+              <div key={attempt.id} style={{
+                background: '#fff', border: '1px solid #e7ded2', borderRadius: 14,
+                padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 18,
+              }}>
+                <div style={{
+                  width: 52, height: 52, borderRadius: 12, flexShrink: 0,
+                  background: pct >= 70 ? '#eef5f0' : '#fef9ec',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, fontWeight: 700, color: pct >= 70 ? '#1f4d46' : '#b45309',
+                }}>
+                  {pct}%
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 8 }}>
-                  <div style={{ flex: 1, height: 9, background: '#f0eae0', borderRadius: 100, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${c.completion}%`, background: c.color, borderRadius: 100 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 600, color: '#3c4742' }}>{attempt.scenario_title}</div>
+                  <div style={{ fontSize: 12.5, color: '#7a857f', marginTop: 3 }}>
+                    {attempt.score} / {attempt.max_score} punti · {date}
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#5a6864', width: 78, textAlign: 'right' }}>
-                    {c.completion}% completato
-                  </div>
+                </div>
+                <div style={{
+                  fontSize: 12, fontWeight: 600, padding: '5px 12px', borderRadius: 100,
+                  background: pct >= 70 ? '#eef5f0' : '#fef9ec',
+                  color: pct >= 70 ? '#2f6b4f' : '#b45309',
+                }}>
+                  {pct >= 70 ? 'Superato' : 'Da rivedere'}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-
-        {/* Skills */}
-        <div style={{ background: '#fff', border: '1px solid #e7ded2', borderRadius: 18, padding: 24 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 700 }}>Competenze medie</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 15, marginTop: 18 }}>
-            {skills.map(s => (
-              <div key={s.label}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: 13, color: '#3c4742' }}>{s.label}</div>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1f4d46' }}>{s.val}%</div>
-                </div>
-                <div style={{ height: 7, background: '#f0eae0', borderRadius: 100, overflow: 'hidden', marginTop: 6 }}>
-                  <div style={{ height: '100%', width: `${s.val}%`, background: '#c06a48', borderRadius: 100 }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Students table */}
-      <div style={{ background: '#fff', border: '1px solid #e7ded2', borderRadius: 18, padding: 24, marginTop: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 14.5, fontWeight: 700 }}>Attività recente dei corsisti</div>
-          <span style={{ fontSize: 12.5, color: '#9aa49f' }}>{students.length} corsisti</span>
-        </div>
-
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1.4fr 1fr 1.4fr .7fr .9fr',
-          gap: 12, padding: '14px 8px 10px', borderBottom: '1px solid #efe8dd', marginTop: 8,
-        }}>
-          {['Corsista', 'Ruolo', 'Scenario', 'Punteggio', 'Stato'].map((h, i) => (
-            <div key={h} style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: '.05em',
-              textTransform: 'uppercase', color: '#9aa49f',
-              textAlign: i >= 3 ? 'right' : 'left',
-            }}>{h}</div>
-          ))}
-        </div>
-
-        {students.map(st => (
-          <div key={st.name} style={{
-            display: 'grid', gridTemplateColumns: '1.4fr 1fr 1.4fr .7fr .9fr',
-            gap: 12, padding: '13px 8px', borderBottom: '1px solid #f4eee5',
-            alignItems: 'center',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%', background: '#e7efeb',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11.5, fontWeight: 600, color: '#1f4d46', flexShrink: 0,
-              }}>{st.initials}</div>
-              <div style={{ fontSize: 13.5, fontWeight: 600, color: '#21302d' }}>{st.name}</div>
-            </div>
-            <div style={{ fontSize: 13, color: '#6c7a75' }}>{st.role}</div>
-            <div style={{ fontSize: 13, color: '#6c7a75' }}>{st.scenario}</div>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#21302d', textAlign: 'right' }}>
-              {st.score > 0 ? `${st.score}%` : '—'}
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <span style={{
-                background: st.statusBg, color: st.statusColor,
-                fontSize: 11.5, fontWeight: 600, padding: '4px 10px', borderRadius: 100,
-              }}>{st.status}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+      )}
     </div>
   );
 }

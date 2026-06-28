@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import type { User } from '@supabase/supabase-js';
 import type { Screen, Scenario, StepResult } from '@/types';
 import { scenarios, glossary } from '@/data/scenarios';
+import { supabase } from '@/lib/supabase';
 import Sidebar from './Sidebar';
+import Auth from './screens/Auth';
 import Home from './screens/Home';
 import Catalog from './screens/Catalog';
 import ScenarioPlayer from './screens/ScenarioPlayer';
@@ -11,6 +14,8 @@ import Report from './screens/Report';
 import Dashboard from './screens/Dashboard';
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [screen, setScreen] = useState<Screen>('home');
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
   const [step, setStep] = useState(0);
@@ -18,6 +23,17 @@ export default function App() {
   const [freeText, setFreeText] = useState('');
   const [feedback, setFeedback] = useState<StepResult | null>(null);
   const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const scrollTop = useCallback(() => {
     if (mainRef.current) mainRef.current.scrollTop = 0;
@@ -81,10 +97,25 @@ export default function App() {
     setResults(prev => [...prev.filter(r => r.stepIndex !== step), res]);
   }, [activeScenario, step, freeText]);
 
+  const saveAttempt = useCallback(async (finalResults: StepResult[]) => {
+    if (!user || !activeScenario) return;
+    const score = finalResults.reduce((s, r) => s + r.points, 0);
+    const maxScore = finalResults.reduce((s, r) => s + r.max, 0);
+    await supabase.from('attempts').insert({
+      user_id: user.id,
+      scenario_id: activeScenario.id,
+      scenario_title: activeScenario.title,
+      score,
+      max_score: maxScore,
+      results: finalResults,
+    });
+  }, [user, activeScenario]);
+
   const continueStep = useCallback(() => {
     if (!activeScenario?.steps) return;
     const next = step + 1;
     if (next >= activeScenario.steps.length) {
+      saveAttempt(results);
       setScreen('report');
       setFeedback(null);
       scrollTop();
@@ -96,7 +127,24 @@ export default function App() {
     setTimeout(() => {
       if (mainRef.current) mainRef.current.scrollTop = mainRef.current.scrollHeight;
     }, 30);
-  }, [activeScenario, step, scrollTop]);
+  }, [activeScenario, step, results, saveAttempt, scrollTop]);
+
+  const handleSignOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    go('home');
+  }, [go]);
+
+  if (authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#f1ece4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#7a857f', fontSize: 14 }}>Caricamento…</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth onAuth={() => setUser(user)} />;
+  }
 
   const inFlow = screen === 'scenario' || screen === 'report';
 
@@ -108,6 +156,8 @@ export default function App() {
         go={go}
         startDemo={() => startScenario('s1')}
         goCatalog={() => go('catalog')}
+        user={user}
+        onSignOut={handleSignOut}
       />
       <main
         ref={mainRef}
@@ -143,7 +193,7 @@ export default function App() {
             goCatalog={() => go('catalog')}
           />
         )}
-        {screen === 'dashboard' && <Dashboard />}
+        {screen === 'dashboard' && <Dashboard user={user} />}
       </main>
     </div>
   );
